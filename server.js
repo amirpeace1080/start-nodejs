@@ -1,7 +1,18 @@
 const express = require("express");
 const app = express();
 const Joi = require("joi");
+const config = require("config")
 app.use(express.json());
+app.use(express.urlencoded({extended: true}))
+
+// my middleware
+app.use((req, res, next)=> {
+    console.log("logging...");
+    next();
+})
+
+// configuration
+console.log(config.get("databaseAddress"));
 
 let customers = [
   {id: 1, name: "ali"},
