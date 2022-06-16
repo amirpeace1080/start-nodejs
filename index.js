@@ -1,5 +1,14 @@
-const _ = require("lodash")
+const http = require("http")
 
-const result  = _.partition([1,2,3,4,5,6], (a) => a > 2)
-
-console.log(result);
+const server = http.createServer((req, res) => {
+  console.log("new request");
+  if (req.url === "/") {
+    res.write("salam");
+    res.end();
+  } else if (req.url === "/api/customers") {
+    res.write("list customer");
+    res.end();
+  }
+});
+server.listen(3000);
+console.log("server listening on port 3000");

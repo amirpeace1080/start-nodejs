@@ -1,89 +1,46 @@
 const express = require("express");
-const app = express();
+const cors = require("cors");
 const Joi = require("joi");
-const config = require("config")
+const config = require("config");
+const morgan = require('morgan');
+const debugConfiguration = require("debug")("app:configuration")
+const debugDB = require("debug")("app:Db");
+const CustomerRoutes = require("./routes/CustomerRoutes")
+const HomeRoutes = require("./routes/HomeRoutes");
+const Logger = require("./middleware/Logger");
+const SaeedForbiddenAuth = require("./middleware/SaeedForbiddenAuth");
+const app = express();
+
+// built-in middleware
 app.use(express.json());
-app.use(express.urlencoded({extended: true}))
+app.use(express.urlencoded({extended: true}));
+app.use(express.static("public"));
+
+if (app.get("env") === "production")
+  app.use(morgan('tiny'));
+
+debugConfiguration("some configuration");
+
+// db ...
+debugDB("db initialized");
+
+// third-party middleware
+app.use(cors());
+
 
 // my middleware
-app.use((req, res, next)=> {
-    console.log("logging...");
-    next();
-})
+app.use(Logger);
+app.use(SaeedForbiddenAuth);
+
+//routes
+app.use(CustomerRoutes);
+app.use(HomeRoutes);
 
 // configuration
 console.log(config.get("databaseAddress"));
 
-let customers = [
-  {id: 1, name: "ali"},
-  {id: 2, name: "saeed"},
-  {id: 3, name: "mohammad"},
-  {id: 4, name: "yalda"},
-];
-
-app.get("/", (req, res) => {
-  res.send("salam express");
-});
-
-
-app.get("/api/customers", (req, res) => {
-  res.send(customers);
-});
-
-app.get("/api/customers/:id", (req, res) => {
-  const customer = customers.find(item => item.id == req.params.id);
-  if (customer)
-    res.send(customer);
-  else res.status(404).send("not found");
-});
-
-app.post("/api/customers", function (req, res) {
-
-  // input validation
-  const schema = Joi.object({
-    name: Joi.string().min(2).max(10).required()
-  })
-  const {error} = schema.validate(req.body);
-  if (error)
-    return res.status(400).send({message: error.message});
-  //
-  // if (!req.body.name || req.body.name.length < 2)
-  //   return res.status(400).send({success: false, message: "مقادیر ورودی را چک کنید"});
-
-  const customer = {
-    id: customers[customers.length - 1].id + 1,
-    name: req.body.name,
-  };
-
-  customers.push(customer);
-  res.send(customer);
-});
-
-app.put("/api/customers/:customerId", (req, res) => {
-  // input validation
-  const schema = Joi.object({
-    name: Joi.string().min(2).max(10).required(),
-    customerId: Joi.number().required()
-  });
-  const {error} = schema.validate({...req.body, customerId: req.params.customerId});
-  if (error)
-    return res.status(400).send({message: error.message});
-
-  const index = customers.findIndex(item => item.id == req.params.customerId);
-  if (index === -1)
-    return res.status(404).send({message: "مشتری مورد نظر یافت نشد"})
-  customers[index].name = req.body.name;
-  res.send(customers[index]);
-});
-
-app.delete("/api/customers/:customerId", (req, res) => {
-  const index = customers.findIndex(item => item.id == req.params.customerId);
-  if (index === -1)
-    return res.status(404).send({message: "مشتری مورد نظر یافت نشد"})
-  customers = [...customers.slice(0, index), ...customers.slice(index + 1)];
-  res.status(200).send();
-});
-
+app.set("view engine", "pug");
+app.set("views", "./views"); // default
 
 
 const port = process.env.myPort || 3000;
